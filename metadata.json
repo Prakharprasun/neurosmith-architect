@@ -1,0 +1,7 @@
+{
+  "name": "NeuroSmith Neural Architect",
+  "description": "A multimodal neural network builder that combines structured inputs, sketches, and voice instructions to generate deterministic PyTorch or TensorFlow code.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
