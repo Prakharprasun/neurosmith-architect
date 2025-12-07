@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img width="1200" height="475" alt="NeuroSmithBanner" src="https://github.com/user-attachments/assets/6e20e096-8f88-4e77-a7d1-906d7f101816" />
 </div>
 
 # NeuroSmith Neural Architect (MVP)
