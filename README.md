@@ -11,7 +11,7 @@ It is designed for rapid neural architecture prototyping — without hallucinati
 
 ---
 
-📸 UI Preview
+## 📸 UI Preview
 
 NeuroSmith’s MVP interface shows deterministic neural architecture generation across diagram, code, and metrics tabs.
 Here are examples from the working prototype:
