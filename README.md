@@ -11,6 +11,20 @@ It is designed for rapid neural architecture prototyping — without hallucinati
 
 ---
 
+📸 UI Preview
+
+NeuroSmith’s MVP interface shows deterministic neural architecture generation across diagram, code, and metrics tabs.
+Here are examples from the working prototype:
+
+🧩 Architecture Stack → Deterministic Code
+<div align="center"> <img src="https://github.com/user-attachments/assets/bce2c930-28df-4e6c-ad76-0e6574bfd637" width="900"/> <br/> <sub>Users select a simple CNN architecture, and NeuroSmith compiles it deterministically into clean PyTorch code.</sub> </div>
+🧠 Architecture Diagram (Auto-Generated)
+<div align="center"> <img src="https://github.com/user-attachments/assets/e8b6118d-02ed-4f0c-a542-f9f4c2eac7d4" width="900"/> <br/> <sub>NeuroSmith renders a clear block-level diagram based on the user-defined architecture sequence.</sub> </div>
+📊 Metrics Panel (MVP Placeholder)
+<div align="center"> <img src="https://github.com/user-attachments/assets/9a7bb55c-765d-4dd6-82ec-c70c7d5bd5b9" width="900"/> <br/> <sub>Metrics tab displays placeholder estimates for parameters, FLOPs, memory, and training time (computed metrics planned in roadmap).</sub> </div>
+🎤 Voice Input + Deterministic Mode Toggle
+<div align="center"> <img src="https://github.com/user-attachments/assets/3cbce11c-1a8c-4fdf-9ff8-4c559ec114d2" width="900"/> <br/> <sub>Voice command module (strict mode) and Deterministic Mode toggle reinforce the safety-first, reproducible architecture generation workflow.</sub> </div>
+
 ## 🎯 Features (MVP)
 - **Canvas Sketch Input** – capture rough architecture structure  
 - **Layer Stack Builder** – select layer types and hyperparameters  
