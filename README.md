@@ -1,157 +1,20 @@
 <div align="center">
-<img width="1200" height="475" alt="NeuroSmithBanner" src="https://github.com/user-attachments/assets/6e20e096-8f88-4e77-a7d1-906d7f101816" />
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# NeuroSmith Neural Architect (MVP)
+# Run and deploy your AI Studio app
 
-**A deterministic, multimodal neural network design studio built with Google AI Studio.**
+This contains everything you need to run your app locally.
 
-NeuroSmith transforms **simple canvas sketches**, **structured dropdown selections**, and **optional voice commands** into a clean, deterministic `MODEL_SPEC` and corresponding deep-learning code (PyTorch or TensorFlow).  
-It is designed for rapid neural architecture prototyping — without hallucination, without randomness, and with an intuitive UI.
+View your app in AI Studio: https://ai.studio/apps/drive/12HPWkoQkexkFdS43IW2oUVdF66I-15X-
 
----
+## Run Locally
 
-# ⭐ Why NeuroSmith Matters  
-In a world rapidly shifting toward *no-code* and *vibe-coding* AI systems, users can describe intentions and receive entire applications or architectures automatically.  
-This unlocks creativity and speed — but it also introduces three major risks:
+**Prerequisites:**  Node.js
 
----
 
-### ❗ 1. Non-Determinism  
-The same prompt can yield different outputs, making debugging and reproducibility extremely difficult.
-
-**NeuroSmith solves this with:**  
-**Deterministic Mode** → same inputs always produce identical architectures and code.  
-No randomness. No drift. No hidden state.
-
----
-
-### ❗ 2. Hallucinated or Invalid Architectures  
-LLMs can generate architectures that are syntactically valid but structurally broken:  
-missing Flatten layers, incorrect tensor shapes, unsupported ops, etc.
-
-**NeuroSmith solves this with:**  
-A **bounded, template-driven compiler** that only emits safe, framework-valid components.  
-Defaults (ReLU, Softmax) ensure stability even when unspecified.
-
----
-
-### ❗ 3. Lack of Auditability  
-If a vibe-coded model is wrong, the user has no way to fix the system.  
-It remains a black box.
-
-**NeuroSmith solves this with:**  
-A transparent, patchable workflow:  
-- Clear `MODEL_SPEC`  
-- Visible validations  
-- Deterministic templates  
-- Users can file issues → each issue becomes a rule update  
-- The system gets *safer* over time  
-
-NeuroSmith isn't just an AI tool —  
-It's a **governed, deterministic architecture compiler** for the no-code era.
-
----
-
-## 📸 UI Preview
-
-NeuroSmith’s MVP interface shows deterministic neural architecture generation across diagram, code, and metrics tabs.  
-Here are examples from the working prototype:
-
----
-
-### 🧩 Architecture Stack → Deterministic Code
-<div align="center">
-<img src="https://github.com/user-attachments/assets/bce2c930-28df-4e6c-ad76-0e6574bfd637" width="900"/>
-<br/>
-<sub>Users select a simple CNN architecture, and NeuroSmith compiles it deterministically into clean PyTorch code.</sub>
-</div>
-
----
-
-### 🧠 Architecture Diagram (Auto-Generated)
-<div align="center">
-<img src="https://github.com/user-attachments/assets/e8b6118d-02ed-4f0c-a542-f9f4c2eac7d4" width="900"/>
-<br/>
-<sub>NeuroSmith renders a clear block-level diagram based on the user-defined architecture sequence.</sub>
-</div>
-
----
-
-### 📊 Metrics Panel (MVP Placeholder)
-<div align="center">
-<img src="https://github.com/user-attachments/assets/9a7bb55c-765d-4dd6-82ec-c70c7d5bd5b9" width="900"/>
-<br/>
-<sub>Metrics tab displays placeholder estimates for parameters, FLOPs, memory, and training time (computed metrics planned in roadmap).</sub>
-</div>
-
----
-
-### 🎤 Voice Input + Deterministic Mode Toggle
-<div align="center">
-<img src="https://github.com/user-attachments/assets/3cbce11c-1a8c-4fdf-9ff8-4c559ec114d2" width="900"/>
-<br/>
-<sub>Voice command module (strict mode) and Deterministic Mode toggle reinforce the safety-first, reproducible architecture generation workflow.</sub>
-</div>
-
----
-
-## 🎯 Features (MVP)
-- **Canvas Sketch Input** – capture rough architecture structure  
-- **Layer Stack Builder** – select layer types and hyperparameters  
-- **Deterministic Mode** – ensures reproducible output (same input → same code)  
-- **Voice Input (Optional)** – simple parameter refinements  
-- **Generate Model Code Button** – produces template-based, stable code  
-- **Output Panel** – shows placeholder text, shimmer animation, and generated code  
-- **Metrics Placeholder** – (Params / FLOPs / Memory shown as "—")
-
-> This is the MVP release — additional planned features such as advanced validation, SVG diagrams, FLOPs calculation, and ONNX/Colab export appear in the roadmap but are not implemented yet.
-
----
-
-## 🚀 Run Locally
-
-**Prerequisite:** Node.js 18+
-
-### 1. Install dependencies
-```bash
-npm install
-```
-
-### 2. Add your Gemini API key
-Create or edit `.env.local`:
-```ini
-GEMINI_API_KEY=your_key_here
-```
-
-### 3. Launch development server
-```bash
-npm run dev
-```
-
-## 🌐 AI Studio Version
-You can view the app directly in Google AI Studio:
-
-https://ai.studio/apps/drive/12HPWkoQkexkFdS43IW2oUVdF66I-15X-
-
-(This link is generated by and hosted on AI Studio.)
-
----
-
-## 🛣️ Roadmap (Post-MVP)
-- Architecture diagram generation (SVG)
-- FLOPs / parameter / memory estimation
-- Enhanced validation checks (shape tracing, illegal sequences)
-- Expanded template gallery (ResNet, U-Net, Transformer)
-- Colab export for instant training
-- ONNX export pipeline
-
----
-
-## 📄 License
-This project is released under the MIT License.
-
-<div align="center">
-NeuroSmith – Deterministic Neural Network Compiler (MVP)<br/>
-Sketch. Select. Generate.
-</div>
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

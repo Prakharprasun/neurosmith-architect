@@ -1,8 +1,8 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   UserDropdowns, 
   LayerConfig, 
+  LayerType,
   Framework, 
   ModelType, 
   Optimizer, 
@@ -41,6 +41,14 @@ async function generateInputHash(data: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function sanitizeSVG(svg: string): string {
+  // Strip script tags and event handlers
+  return svg
+    .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+    .replace(/\s*on\w+="[^"]*"/gim, "")
+    .replace(/javascript:/gim, "");
+}
+
 // --- Templates ---
 const TEMPLATES: Record<string, Partial<UserDropdowns>> = {
   "ResNet-18": { model_type: 'cnn', layers: [
@@ -66,6 +74,8 @@ const TEMPLATES: Record<string, Partial<UserDropdowns>> = {
   ]}
 };
 
+const AVAILABLE_LAYERS: LayerType[] = ['Conv2D', 'MaxPool2D', 'Dense', 'LSTM', 'Dropout', 'Flatten', 'BatchNorm2D'];
+
 export default function NeuroSmithPro() {
   // --- State ---
   const [framework, setFramework] = useState<Framework>('pytorch');
@@ -74,6 +84,7 @@ export default function NeuroSmithPro() {
   const [optimizer, setOptimizer] = useState<Optimizer>('Adam');
   const [learningRate, setLearningRate] = useState<number>(0.001);
   const [epochs, setEpochs] = useState<number>(10);
+  const [batchSize, setBatchSize] = useState<number>(32);
   
   // Deterministic Mode
   const [isDeterministic, setIsDeterministic] = useState(true);
@@ -94,25 +105,46 @@ export default function NeuroSmithPro() {
 
   // Canvas State
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  // Use ref for drawing state to avoid re-renders causing stutter
+  const isDrawingRef = useRef(false);
 
   // --- Helpers ---
-  const addLayer = (type: string) => {
-    setLayers([...layers, { id: Math.random().toString(36).substr(2, 9), type }]);
-  };
-  const removeLayer = (id: string) => {
-    setLayers(layers.filter(l => l.id !== id));
-  };
-  const loadTemplate = (name: string) => {
+  const addLayer = useCallback((type: LayerType) => {
+    // Use explicit defaults for key layers to enhance determinism
+    let newLayer: LayerConfig = { id: crypto.randomUUID(), type };
+    
+    // Add deterministic defaults if user doesn't specify
+    if (type === 'Conv2D') {
+      newLayer = { ...newLayer, filters: 32, kernel_size: 3 };
+    } else if (type === 'Dense') {
+      newLayer = { ...newLayer, units: 128 };
+    } else if (type === 'LSTM' || type === 'GRU') {
+      newLayer = { ...newLayer, units: 128 };
+    } else if (type === 'Dropout') {
+      newLayer = { ...newLayer, dropout_rate: 0.2 };
+    }
+
+    setLayers(prev => [...prev, newLayer]);
+  }, []);
+
+  const removeLayer = useCallback((id: string) => {
+    setLayers(prev => prev.filter(l => l.id !== id));
+  }, []);
+
+  const loadTemplate = useCallback((name: string) => {
     const t = TEMPLATES[name];
     if (t) {
       if(t.model_type) setModelType(t.model_type);
-      if(t.layers) setLayers([...t.layers]);
+      if(t.layers) {
+         // Regenerate IDs to avoid collisions on reload
+         const newLayers = t.layers.map(l => ({ ...l, id: crypto.randomUUID() }));
+         setLayers(newLayers as LayerConfig[]);
+      }
     }
-  };
+  }, []);
 
   // --- Audio ---
-  const toggleRecording = async () => {
+  const toggleRecording = useCallback(async () => {
     if (isRecording) {
       mediaRecorderRef.current?.stop();
       setIsRecording(false);
@@ -129,6 +161,7 @@ export default function NeuroSmithPro() {
         mediaRecorderRef.current.start();
         setIsRecording(true);
         
+        // Safer check for Speech Recognition
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
            const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
            const recognition = new SpeechRecognition();
@@ -141,16 +174,22 @@ export default function NeuroSmithPro() {
              }
              setVoiceTranscript(interim);
            };
+           recognition.onerror = (e: any) => console.warn("Speech recognition error:", e);
            recognition.start();
-           const stopRec = () => recognition.stop();
+           const stopRec = () => {
+             try { recognition.stop(); } catch(e){}
+           };
            mediaRecorderRef.current.addEventListener('stop', stopRec);
+        } else {
+          setVoiceTranscript("Browser does not support live transcription. Audio will be sent to model.");
         }
 
       } catch (err) {
         console.error("Mic Error", err);
+        alert("Could not access microphone.");
       }
     }
-  };
+  }, [isRecording]);
 
   // --- Canvas ---
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
@@ -158,7 +197,7 @@ export default function NeuroSmithPro() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    setIsDrawing(true);
+    isDrawingRef.current = true;
     const rect = canvas.getBoundingClientRect();
     const x = ('touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX) - rect.left;
     const y = ('touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY) - rect.top;
@@ -169,7 +208,7 @@ export default function NeuroSmithPro() {
     ctx.lineCap = 'round';
   };
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
+    if (!isDrawingRef.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -179,6 +218,9 @@ export default function NeuroSmithPro() {
     ctx?.lineTo(x, y);
     ctx?.stroke();
   };
+  const stopDrawing = () => {
+    isDrawingRef.current = false;
+  }
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -192,16 +234,19 @@ export default function NeuroSmithPro() {
     setIsGenerating(true);
     setResult(null); // Clear previous result to show loading state in tab
     
+    // Safer toBlob implementation
     let imageBlob: Blob | null = null;
     if (canvasRef.current) {
-      imageBlob = await new Promise(r => canvasRef.current?.toBlob(r, 'image/png'));
+      imageBlob = await new Promise(resolve => {
+        canvasRef.current?.toBlob(blob => resolve(blob ?? null), 'image/png');
+      });
     }
 
     const dropdowns: UserDropdowns = {
       framework,
       model_type: modelType,
       layers,
-      hyperparameters: { optimizer, learning_rate: learningRate, epochs },
+      hyperparameters: { optimizer, learning_rate: learningRate, epochs, batch_size: batchSize },
       isDeterministic
     };
 
@@ -210,12 +255,16 @@ export default function NeuroSmithPro() {
     generateInputHash(hashBase).then(setInputHash);
 
     try {
-      const res = await generateNeuralNetwork(dropdowns, imageBlob, audioBlob, voiceTranscript, isDeterministic);
+      // Prioritize transcript over raw audio to avoid ambiguity/conflict
+      // Only send audio blob if transcript is empty
+      const audioToSend = voiceTranscript && voiceTranscript.trim().length > 0 ? null : audioBlob;
+      
+      const res = await generateNeuralNetwork(dropdowns, imageBlob, audioToSend, voiceTranscript, isDeterministic);
       setResult(res);
       setActiveTab('code'); // Auto switch to code on generation
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Generation failed. See console.");
+      alert(e.message || "Generation failed.");
     } finally {
       setIsGenerating(false);
     }
@@ -226,6 +275,13 @@ export default function NeuroSmithPro() {
     if (!result) return "";
     return framework === 'pytorch' ? result.generated_code.pytorch : result.generated_code.tensorflow;
   };
+
+  const getSanitizedSVG = () => {
+    if (!result) return "";
+    // Regex replace to ensure svg scales
+    let svg = result.diagram_svg.replace(/<svg([^>]*)>/, '<svg$1 width="100%" height="100%">');
+    return sanitizeSVG(svg);
+  }
 
   const downloadFile = (content: string, filename: string) => {
     const a = document.createElement('a');
@@ -255,11 +311,11 @@ export default function NeuroSmithPro() {
                 <div className="grid grid-cols-2 gap-4">
                    <div>
                       <div className="text-gray-500 uppercase font-bold mb-1">Template Version</div>
-                      <div className="text-white">v1.0 ({framework})</div>
+                      <div className="text-white">v1.0</div>
                    </div>
                    <div>
-                      <div className="text-gray-500 uppercase font-bold mb-1">Deterministic Mode</div>
-                      <div className="text-[#8AFF8A]">ACTIVE</div>
+                      <div className="text-gray-500 uppercase font-bold mb-1">Gemini Model</div>
+                      <div className="text-white">gemini-3.0-pro (temp=0)</div>
                    </div>
                 </div>
                 <div>
@@ -366,7 +422,7 @@ export default function NeuroSmithPro() {
                  ))}
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                 {['Conv2D', 'MaxPool2D', 'Dense', 'LSTM', 'Dropout', 'Flatten', 'BatchNorm'].map(t => (
+                 {AVAILABLE_LAYERS.map(t => (
                    <button key={t} onClick={() => addLayer(t)} className="px-3 py-1 bg-[#262626] border border-[#333] rounded text-[10px] hover:bg-[#333] hover:text-cyan-400 transition-colors whitespace-nowrap text-gray-400">
                      + {t}
                    </button>
@@ -374,12 +430,16 @@ export default function NeuroSmithPro() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
                <div>
                   <label className="text-[10px] text-gray-500 block mb-1">LR</label>
                   <input type="number" step="0.001" value={learningRate} onChange={e => setLearningRate(parseFloat(e.target.value))} className="w-full bg-[#1A1A1A] border border-[#333] rounded p-1 text-xs font-mono text-gray-300 focus:border-cyan-500 outline-none" />
                </div>
                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">Batch</label>
+                  <input type="number" value={batchSize} onChange={e => setBatchSize(parseInt(e.target.value))} className="w-full bg-[#1A1A1A] border border-[#333] rounded p-1 text-xs font-mono text-gray-300 focus:border-cyan-500 outline-none" />
+               </div>
+               <div className="col-span-2">
                   <label className="text-[10px] text-gray-500 block mb-1">Optim</label>
                   <select value={optimizer} onChange={e => setOptimizer(e.target.value as Optimizer)} className="w-full bg-[#1A1A1A] border border-[#333] rounded p-1 text-xs font-mono text-gray-300 focus:border-cyan-500 outline-none">
                     <option>Adam</option><option>SGD</option><option>RMSprop</option>
@@ -418,11 +478,11 @@ export default function NeuroSmithPro() {
                    className="w-full h-full cursor-crosshair touch-none"
                    onMouseDown={startDrawing}
                    onMouseMove={draw}
-                   onMouseUp={() => setIsDrawing(false)}
-                   onMouseLeave={() => setIsDrawing(false)}
+                   onMouseUp={stopDrawing}
+                   onMouseLeave={stopDrawing}
                    onTouchStart={startDrawing}
                    onTouchMove={draw}
-                   onTouchEnd={() => setIsDrawing(false)}
+                   onTouchEnd={stopDrawing}
                 />
              </div>
 
@@ -561,7 +621,7 @@ export default function NeuroSmithPro() {
                        <div className="flex-1 flex items-center justify-center p-8 bg-[#0E0E0E]">
                           <div 
                             className="w-full max-w-3xl svg-container"
-                            dangerouslySetInnerHTML={{ __html: result.diagram_svg.replace('<svg', '<svg width="100%" height="100%"') }} 
+                            dangerouslySetInnerHTML={{ __html: getSanitizedSVG() }} 
                           />
                        </div>
                        <div className="p-6 border-t border-[#2A2A2A] bg-[#161616]">
@@ -576,66 +636,80 @@ export default function NeuroSmithPro() {
             {/* METRICS TAB */}
             {activeTab === 'metrics' && (
               <div className="p-8 max-w-3xl mx-auto space-y-8 bg-[#0E0E0E]">
-                 {/* Stats Grid */}
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
-                       <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Parameters</div>
-                       <div className="text-2xl font-mono text-white">
-                          {result ? (result.complexity.total_parameters / 1000000).toFixed(2) + "M" : "—"}
-                       </div>
-                       <div className="text-xs text-gray-600 mt-2">Total Trainable Weights</div>
+                 {isGenerating ? (
+                    // Metrics Shimmer
+                    <div className="grid grid-cols-2 gap-4 opacity-50">
+                      {[1,2,3,4].map(i => (
+                         <div key={i} className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl animate-pulse">
+                            <div className="h-3 w-20 bg-[#2A2A2A] rounded mb-2"></div>
+                            <div className="h-8 w-32 bg-[#2A2A2A] rounded"></div>
+                         </div>
+                      ))}
                     </div>
-                    <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
-                       <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Compute</div>
-                       <div className="text-2xl font-mono text-white">
-                          {result ? (result.complexity.flops / 1000000000).toFixed(2) + "G" : "—"}
-                       </div>
-                       <div className="text-xs text-gray-600 mt-2">FLOPs per forward pass</div>
-                    </div>
-                    <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
-                       <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Memory</div>
-                       <div className="text-2xl font-mono text-white">
-                          {result ? result.complexity.memory_mb + " MB" : "—"}
-                       </div>
-                       <div className="text-xs text-gray-600 mt-2">Est. VRAM Usage (Batch 32)</div>
-                    </div>
-                    <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
-                       <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Training Time (T4)</div>
-                       <div className="text-2xl font-mono text-white">
-                          {result ? result.complexity.estimated_training_time.T4 : "—"}
-                       </div>
-                       <div className="text-xs text-gray-600 mt-2">Approximate per run</div>
-                    </div>
-                 </div>
+                 ) : (
+                   <>
+                     {/* Stats Grid */}
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
+                           <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Parameters</div>
+                           <div className="text-2xl font-mono text-white">
+                              {result ? (result.complexity.total_parameters / 1000000).toFixed(2) + "M" : "—"}
+                           </div>
+                           <div className="text-xs text-gray-600 mt-2">Total Trainable Weights</div>
+                        </div>
+                        <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
+                           <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Compute</div>
+                           <div className="text-2xl font-mono text-white">
+                              {result ? (result.complexity.flops / 1000000000).toFixed(2) + "G" : "—"}
+                           </div>
+                           <div className="text-xs text-gray-600 mt-2">FLOPs per forward pass</div>
+                        </div>
+                        <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
+                           <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Memory</div>
+                           <div className="text-2xl font-mono text-white">
+                              {result ? result.complexity.memory_mb + " MB" : "—"}
+                           </div>
+                           <div className="text-xs text-gray-600 mt-2">Est. VRAM Usage (Batch 32)</div>
+                        </div>
+                        <div className="bg-[#161616] border border-[#2A2A2A] p-6 rounded-xl">
+                           <div className="text-cyan-400/70 text-xs uppercase font-bold mb-1">Training Time (T4)</div>
+                           <div className="text-2xl font-mono text-white">
+                              {result ? result.complexity.estimated_training_time.T4 : "—"}
+                           </div>
+                           <div className="text-xs text-gray-600 mt-2">Approximate per run</div>
+                        </div>
+                     </div>
 
-                 {/* Validation Log */}
-                 {result && (
-                    <div className="bg-[#161616] border border-[#2A2A2A] rounded-xl overflow-hidden">
-                       <div className="px-6 py-4 border-b border-[#2A2A2A] font-bold text-sm text-gray-300">Validation Analysis</div>
-                       <div className="p-6 space-y-3">
-                          {result.validation.valid && result.validation.warnings.length === 0 && (
-                             <div className="flex items-center gap-3 text-[#8AFF8A] bg-[#8AFF8A]/5 p-3 rounded border border-[#8AFF8A]/20">
-                                <div className="w-2 h-2 rounded-full bg-[#8AFF8A]"></div>
-                                <span className="text-sm">Architecture is valid and optimized.</span>
-                             </div>
-                          )}
-                          {result.validation.warnings.map((w, i) => (
-                             <div key={i} className="flex gap-3 text-[#FFD966] bg-[#FFD966]/5 p-3 rounded border border-[#FFD966]/20">
-                                <div className="mt-1 w-2 h-2 rounded-full bg-[#FFD966] shrink-0"></div>
-                                <div>
-                                   <div className="text-sm font-bold">{w.message}</div>
-                                   <div className="text-xs opacity-80 mt-1">{w.suggestion}</div>
-                                </div>
-                             </div>
-                          ))}
-                          {result.validation.errors.map((e, i) => (
-                             <div key={i} className="flex gap-3 text-[#FF8A8A] bg-[#FF8A8A]/5 p-3 rounded border border-[#FF8A8A]/20">
-                                <div className="mt-1 w-2 h-2 rounded-full bg-[#FF8A8A] shrink-0"></div>
-                                <div className="text-sm">{e}</div>
-                             </div>
-                          ))}
-                       </div>
-                    </div>
+                     {/* Validation Log */}
+                     {result && (
+                        <div className="bg-[#161616] border border-[#2A2A2A] rounded-xl overflow-hidden">
+                           <div className="px-6 py-4 border-b border-[#2A2A2A] font-bold text-sm text-gray-300">Validation Analysis</div>
+                           <div className="p-6 space-y-3">
+                              {result.validation.valid && result.validation.warnings.length === 0 && (
+                                 <div className="flex items-center gap-3 text-[#8AFF8A] bg-[#8AFF8A]/5 p-3 rounded border border-[#8AFF8A]/20">
+                                    <div className="w-2 h-2 rounded-full bg-[#8AFF8A]"></div>
+                                    <span className="text-sm">Architecture is valid and optimized.</span>
+                                 </div>
+                              )}
+                              {result.validation.warnings.map((w, i) => (
+                                 <div key={i} className="flex gap-3 text-[#FFD966] bg-[#FFD966]/5 p-3 rounded border border-[#FFD966]/20">
+                                    <div className="mt-1 w-2 h-2 rounded-full bg-[#FFD966] shrink-0"></div>
+                                    <div>
+                                       <div className="text-sm font-bold">{w.message}</div>
+                                       <div className="text-xs opacity-80 mt-1">{w.suggestion}</div>
+                                    </div>
+                                 </div>
+                              ))}
+                              {result.validation.errors.map((e, i) => (
+                                 <div key={i} className="flex gap-3 text-[#FF8A8A] bg-[#FF8A8A]/5 p-3 rounded border border-[#FF8A8A]/20">
+                                    <div className="mt-1 w-2 h-2 rounded-full bg-[#FF8A8A] shrink-0"></div>
+                                    <div className="text-sm">{e}</div>
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+                     )}
+                   </>
                  )}
               </div>
             )}

@@ -3,9 +3,14 @@ export type Framework = 'pytorch' | 'tensorflow';
 export type ModelType = 'cnn' | 'mlp' | 'transformer' | 'rnn';
 export type Optimizer = 'Adam' | 'SGD' | 'RMSprop';
 
+export type LayerType = 
+  | 'Conv2D' | 'MaxPool2D' | 'AvgPool2D' | 'BatchNorm2D' 
+  | 'Dropout' | 'Flatten' | 'Dense' | 'ReLU' | 'LeakyReLU' | 'GELU' | 'Softmax'
+  | 'LSTM' | 'GRU' | 'Embedding' | 'MultiHeadAttention' | 'LayerNorm' | 'PositionalEncoding';
+
 export interface LayerConfig {
   id: string;
-  type: string;
+  type: LayerType;
   units?: number;
   filters?: number;
   kernel_size?: number;
@@ -17,6 +22,7 @@ export interface TrainingConfig {
   optimizer: Optimizer;
   learning_rate: number;
   epochs: number;
+  batch_size: number;
 }
 
 export interface UserDropdowns {

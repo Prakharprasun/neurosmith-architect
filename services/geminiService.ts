@@ -98,6 +98,36 @@ If image shows 5 blocks but dropdown has 3 layers:
 → Trust dropdown, mention in rationale that image suggests more layers
 
 ═══════════════════════════════════════════════════════════════════════════════
+MASTER VALIDATOR RULES
+═══════════════════════════════════════════════════════════════════════════════
+
+Before returning, you MUST perform these checks. If any fail, return an ERROR JSON.
+
+1. MODEL_SPEC ⇆ DROPDOWN_JSON CONSISTENCY
+   - Framework and Model Type must match dropdowns exactly.
+   - Defaults must ONLY be used for unspecified fields.
+
+2. DETERMINISM (If Deterministic Mode = ON)
+   - No inferred parameters.
+   - Identical inputs = Identical outputs.
+
+3. STRUCTURAL VALIDITY
+   - Flatten() required before Dense in CNNs.
+   - No illegal layer transitions.
+
+4. CODE CONSISTENCY
+   - Code must match MODEL_SPEC layers exactly.
+
+If ANY check fails, return ONLY this JSON structure:
+{
+  "error": {
+    "message": "<User friendly description>",
+    "failed_check": "<Rule name>",
+    "recommendation": "<Fix suggestion>"
+  }
+}
+
+═══════════════════════════════════════════════════════════════════════════════
 OUTPUT FORMAT (STRICT JSON)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -214,6 +244,7 @@ SAFETY AND CONSTRAINTS
 ═══════════════════════════════════════════════════════════════════════════════
 - Never generate medical/financial models with claims.
 - Limit total parameters to 50M.
+- Never output personally identifiable information, unsafe medical advice, or unverifiable claims.
 
 Output ONLY the JSON object, no additional text.
 `;
@@ -232,6 +263,9 @@ export const generateNeuralNetwork = async (
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const parts: any[] = [];
+  
+  // Guardrail: Explicitly request strict JSON and no markdown
+  parts.push({ text: "OUTPUT STRICT JSON ONLY. DO NOT use markdown. DO NOT include ```." });
 
   // 1. Text Data
   const dropdownText = `DROPDOWN_DATA: ${JSON.stringify(dropdowns, null, 2)}`;
@@ -262,7 +296,7 @@ export const generateNeuralNetwork = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", 
+      model: "gemini-3.0-pro", 
       contents: { parts },
       config: {
         systemInstruction: systemInstruction,
@@ -273,9 +307,27 @@ export const generateNeuralNetwork = async (
       }
     });
 
-    const text = response.text || "{}";
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const result = JSON.parse(cleanText) as FullGenerationResult;
+    // Robust text extraction for new SDK
+    const rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text ?? response.text ?? "{}";
+    
+    // Clean JSON (remove markdown, trim, remove trailing commas)
+    let cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    cleanText = cleanText.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+
+    let result;
+    try {
+      result = JSON.parse(cleanText) as FullGenerationResult;
+    } catch (parseError) {
+      console.error("JSON Parse Error. Raw text:", cleanText);
+      throw new Error("Failed to parse model response. The AI output was not valid JSON.");
+    }
+    
+    // Check for Master Validator Error
+    if ((result as any).error) {
+       const err = (result as any).error;
+       throw new Error(`Validation Failed: ${err.message} (${err.recommendation})`);
+    }
+
     return result;
 
   } catch (error) {
