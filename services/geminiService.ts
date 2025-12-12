@@ -296,7 +296,7 @@ export const generateNeuralNetwork = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-pro", 
+      model: "gemini-3-pro-preview", 
       contents: { parts },
       config: {
         systemInstruction: systemInstruction,

@@ -122,6 +122,9 @@ export default function NeuroSmithPro() {
       newLayer = { ...newLayer, units: 128 };
     } else if (type === 'Dropout') {
       newLayer = { ...newLayer, dropout_rate: 0.2 };
+    } else if (type === 'BatchNorm2D') {
+      // Default params for BatchNorm to ensure determinism
+      newLayer = { ...newLayer, momentum: 0.99, epsilon: 1e-3 } as any;
     }
 
     setLayers(prev => [...prev, newLayer]);
@@ -718,4 +721,3 @@ export default function NeuroSmithPro() {
       </div>
     </div>
   );
-}
