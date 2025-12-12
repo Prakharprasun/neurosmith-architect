@@ -99,7 +99,7 @@ Here are examples from the working prototype:
 
 ### 🧩 Architecture Stack → Deterministic Code
 <div align="center">
-<img src="https://github.com/user-attachments/assets/bce2c930-28df-4e6c-ad76-0e6574bfd637" width="900"/>
+<img src="https://github.com/user-attachments/assets/0ce0a388-ee5b-48a9-987a-3c4de09f6b1a" width="900"/>
 <br/>
 <sub>Users select a simple CNN architecture, and NeuroSmith compiles it deterministically into clean PyTorch code.</sub>
 </div>
@@ -108,7 +108,7 @@ Here are examples from the working prototype:
 
 ### 🧠 Architecture Diagram (Auto-Generated)
 <div align="center">
-<img src="https://github.com/user-attachments/assets/e8b6118d-02ed-4f0c-a542-f9f4c2eac7d4" width="900"/>
+<img src="https://github.com/user-attachments/assets/ceabb935-8020-4948-b2fb-5a89b65ddbd6" width="900"/>
 <br/>
 <sub>NeuroSmith renders a clear block-level diagram based on the user-defined architecture sequence.</sub>
 </div>
@@ -117,7 +117,7 @@ Here are examples from the working prototype:
 
 ### 📊 Metrics Panel (MVP Placeholder)
 <div align="center">
-<img src="https://github.com/user-attachments/assets/9a7bb55c-765d-4dd6-82ec-c70c7d5bd5b9" width="900"/>
+<img src="https://github.com/user-attachments/assets/1065b399-28af-439f-b1ae-b0d1129fb6ec" width="900"/>
 <br/>
 <sub>Metrics tab displays placeholder estimates for parameters, FLOPs, memory, and training time (computed metrics planned in roadmap).</sub>
 </div>
@@ -126,7 +126,16 @@ Here are examples from the working prototype:
 
 ### 🎤 Voice Input + Deterministic Mode Toggle
 <div align="center">
-<img src="https://github.com/user-attachments/assets/3cbce11c-1a8c-4fdf-9ff8-4c559ec114d2" width="900"/>
+<img src="https://github.com/user-attachments/assets/494b1fb9-304a-43fc-83e4-fd7fc222d3d0" width="900"/>
+<br/>
+<sub>Voice command module (strict mode) and Deterministic Mode toggle reinforce the safety-first, reproducible architecture generation workflow.</sub>
+</div>
+
+---
+
+### 🕵 Proof Panel
+<div align="center">
+<img src="https://github.com/user-attachments/assets/59840d70-46d8-4c1d-b08a-90ebb84d7287" width="900"/>
 <br/>
 <sub>Voice command module (strict mode) and Deterministic Mode toggle reinforce the safety-first, reproducible architecture generation workflow.</sub>
 </div>
