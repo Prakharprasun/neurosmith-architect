@@ -316,6 +316,9 @@ https://ai.studio/apps/drive/12HPWkoQkexkFdS43IW2oUVdF66I-15X-
 ## 📄 License
 This project is released under the MIT License.
 
+## 🖊️ Citation
+Prakhar Prasun. NeuroSmith: A Deterministic Multimodal Neural Network Architect. https://www.kaggle.com/competitions/gemini-3/writeups/neurosmith-a-deterministic-multimodal-neural-netw. 2025. Kaggle
+
 <div align="center">
 NeuroSmith – Deterministic Neural Network Compiler (MVP)<br/>
 Sketch. Select. Generate.
